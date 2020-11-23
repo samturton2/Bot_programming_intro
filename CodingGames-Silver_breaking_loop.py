@@ -213,7 +213,7 @@ while True:
             if potion[-1] > best_potion[-1] and can_brew(potion, inv):
                 best_potion = potion
         # if been is special iter for too long cast any spell that makes inventory space
-        if special_iter > 2 and not can_brew(potion, inv):
+        if special_iter > 3 and not can_brew(potion, inv):
             for spell in cast:
                 if sum(spell[1])+sum(inv[0]) < 10 and can_cast(spell, inv): # if frees up space cast it
                     best_spell = spell

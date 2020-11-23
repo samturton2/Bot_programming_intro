@@ -132,7 +132,7 @@ while True:
     for potion in brew:
         weight = 0
         for i in range(4):
-            if inv[0][i] < -potion[1][i]: # Check if we have we don't have enough ingredients, if enough difficulty to make is 0 so we pass
+            if inv[0][i] < -potion[1][i]: # Check if we have enough ingredients, if enough=> difficulty to make is 0 so we pass
                 weight += -(potion[1][i] + inv[0][i]) * diff_index[i] # negative number takes into account negative potion deltas
         if weight == 0:
             weighted.append(100)
@@ -185,7 +185,8 @@ while True:
         # Sort all the potions and spells by weight (lowest weight first)
         sorted_spells.sort(key = lambda x: x[-1])
     # SORTING WEIGHTED LIST BLOCK
-    
+        
+        rest_it = True
     # CASTING BLOCK
         # go through the weighted list of spells, and looking to cast the most useful one first
         for spell, weight in sorted_spells:

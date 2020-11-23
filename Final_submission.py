@@ -1,5 +1,6 @@
 import sys
 import math
+from datetime import datetime
 
 # define the number of round and number of brewed
 brewed = 0
@@ -37,17 +38,11 @@ def can_learn(spell_list, inv_list):
         return True
 
 
-# Define a function to check if a potion is in the list of potions
-def in_brew(a_potion, brew_list):
-    for i in range(len(brew_list)):
-        if a_potion[0] == brew_list[i][0]:
-            return True
-    return False
-
 # Auto-generated code below aims at helping you parse
 # the standard input according to the problem statement.
 # game loop
 while True:
+    t1 = datetime.now()
     
     round_i += 1 # Tells us the round we are on
     brew = [] # empty list for potion_lists
@@ -83,15 +78,13 @@ while True:
         
         # Loads list of potions, spells and learning spells
         if action_type == 'BREW':
-            brew.append([action_id, [delta_0, delta_1, delta_2, delta_3], tome_index, price])
+            brew.append([action_id, [delta_0, delta_1, delta_2, delta_3], price])
         elif action_type == "CAST":
             cast.append([action_id, [delta_0, delta_1, delta_2, delta_3], 1, repeatable, castable])
-            if repeatable: # if repeatable also append an instance where its cast twice
+            if repeatable:
                 cast.append([action_id, [delta_0*2, delta_1*2, delta_2*2, delta_3*2], 2, repeatable, castable])
         elif action_type == "LEARN":
-            learn.append([action_id, [delta_0, delta_1, delta_2, delta_3], 1, repeatable, tax_count, tome_index])
-            if repeatable: # if repeatable also append an instance where its would be cast twice
-                learn.append([action_id, [delta_0*2, delta_1*2, delta_2*2, delta_3*2], 2, tax_count, tome_index])
+            learn.append([action_id, [delta_0, delta_1, delta_2, delta_3], repeatable, tax_count, tome_index])
 
     for i in range(2):
         # inv_0: tier-0 ingredients in inventory
@@ -115,58 +108,20 @@ while True:
     learn_it = False # Assume to not learn spell
 
 
-    # WHOLE NEW IDEA OF FINDING A PATH FROM POTIONS TO ONE OF THE POTIONS
-
-
-
-    # on the first couple rounds learn some spells
-    if round_i == 1: # round 1 learn a spell that gives more ingredients
-        learn_it = True
-        best_learn = learn[0]
-        for spell in learn:
-            if sum(spell[1]) <= 2 and can_learn(spell, inv):
+    # on the first 5 turns learn a spell
+    if round_i in range(5):
+        for spell in learn[::-1]:
+            if can_learn(spell, inv):
+                learn_it = True
                 best_learn = spell
-    elif round_i == 2: # round 2 learn a spell that gives lots of ingredients
-        learn_it = True
-        best_learn = learn[0]
-    elif round_i == 3:
-        learn_it = True
-        best_learn = learn[0]
-    elif round_i == 5: # round 2 learn a spell that gives lots of ingredients
-        learn_it = True
-        best_learn = learn[0]
-        for spell in learn:
-            if sum([(x**2)**0.5 for x in spell[1]]) >= 5 and can_learn(spell, inv):
-                best_learn = spell    
-    elif round_i == 11: # round 3 learna spell that gives same ingredients
-        learn_it = True
-        best_learn = learn[0]
-        for spell in learn:
-            if sum(spell[1]) == 0 and can_learn(spell, inv):
-                best_learn = spell
-    elif round_i == 15: # round 5 learn a spell that gets rid of ingredients
-        learn_it = True
-        best_learn = learn[0]
-        for spell in learn:
-            if sum(spell[1]) <= -2 and can_learn(spell, inv):
-                best_learn = spell    
-            
 
-
-    # Find the potion with the highest price to ease to make ratio
-    diff_index = [0.3, 1.1, 1.8, 2.7] # TO IMPROVE // change the diff index depending on spells you can cast
-    weighted = [] # make a list to score the potions on the ratio of how many rupies they give you : how hard they are to make with ingredients you have (higher the score the better)
-    for potion in brew:
-        weight = 0
-        for i in range(4):
-            if inv[0][i] < -potion[1][i]: # Check if we have we don't have enough ingredients, if enough difficulty to make is 0 so we pass
-                weight += -(potion[1][i] + inv[0][i]) * diff_index[i] # negative number takes into account negative potion deltas
-        if weight == 0:
-            weighted.append(100)
-        else:
-            weighted.append(potion[-1]/weight) # price / difficulty to make 
-    print(f"debug ... {max(weighted)}", file=sys.stderr, flush=True)
-    best_potion = brew[weighted.index(max(weighted))]
+    # # Loop round the brew spells searching for max price
+    # best_potion = [0, 0, 0, 0]
+    # for potion in brew: 
+    #     if potion[-1] > best_potion[-1]:
+    #         best_potion = potion
+    
+    
 
     # If its the 5th brew, check if there is a quickest potion to make that beats enemy score and make it
     if brewed == 5 or enemy_brewed[0] == 5:
@@ -183,33 +138,44 @@ while True:
         # print(f"debug ... {weighted}", file=sys.stderr, flush=True)  
         min_weight = 1000 # try and find the minimum weighted potion to brew that overtakes the enemy score
         for option in weighted:
-            if option[0][-1] > rup[1]-rup[0]+2: # if the options price overtakes +2
+            if option[0][-1] > rup[1]-rup[0]: # if the options price overtakes
                 if option[1] < min_weight:
                     min_weight = option[1]
                     best_potion = option[0]
         # if best potion still not found pick the one with the highest score
-
+    else:# if not in_brew(best_potion, brew): # Checks if we need to revise the best potion to brew
+        # Find the potion with the highest price to ease to make ratio
+        diff_index = [0.1, 0.8, 1.8, 2.8] # TO IMPROVE // change the diff index depending on spells you can cast
+        weighted = [] # make a list to score the potions on the ratio of how many rupies they give you : how hard they are to make with ingredients you have (higher the score the better)
+        for potion in brew:
+            weight = 0
+            for i in range(4):
+                if inv[0][i] < -potion[1][i]: # Check if we have we don't have enough ingredients, if enough difficulty to make is 0 so we pass
+                    weight += -(potion[1][i] + inv[0][i]) * diff_index[i] # negative number takes into account negative potion deltas
+            if weight == 0:
+                weighted.append(100)
+            else:
+                weighted.append(potion[-1]/weight) # price / difficulty to make 
+        # print(f"debug ... {weighted}", file=sys.stderr, flush=True)
+        best_potion = brew[weighted.index(max(weighted))]
     
     # IF LEARNING IMPLEMENTED: store the spells you can cast and pick the one that gives you the most of an ingredient
-    if not can_brew(best_potion, inv) and not learn_it: # check if need to cast
+    if can_brew(best_potion, inv) == False: # check if need to cast a spell
     
         # WRITE CODE WHICH SCORES THE SPELLS IN TERMS OF USEFULLNESS
         difficulty = [0.8, 1.3, 1.8, 2.3]
         weighted_cast = []
-        sorted_cast = []
         for spell in cast:
             weight = 0
             for i in range(4): # Find how many ingredients away from the best_potion the spell gets
                 if best_potion[1][i] + inv[0][i] + spell[1][i] < 0:
                     weight += ((best_potion[1][i] + inv[0][i] + spell[1][i]) * -difficulty[i])
 
-            weighted_cast.append([spell, weight])
+            weighted_cast.append((spell, weight))
             
         # order the list by weight, having smallest weight first
         weighted_cast.sort(key = lambda x: x[1])
         # load into sorted_cast
-        for spellweight in weighted_cast:
-            sorted_cast.append(spellweight[0])
         # print(f"debug ... {weighted_cast}", file=sys.stderr, flush=True) 
     
     # casts spells to make the chosen potion
@@ -222,7 +188,7 @@ while True:
         # loop round ingredients, updating the need_more to a less expensive ingredient
         for _ in range(need_more, -1, -1):
             # check spells if they can provide me with more of that
-            for spell in sorted_cast:
+            for spell, weight in weighted_cast:# cast[::-1]:
                 if spell[1][_] > 0 and can_cast(spell, inv):
                     # if we cast a spell we break the loops and do it
                     cast_it = True
@@ -231,11 +197,8 @@ while True:
             if cast_it:
                 special_iter = 0 #reset special iter
                 break
-        
-    # IF LEARN SPELL COULD GET YOU BEST POTION, AND CURRENT CASTING SPELL DOESNT GIVE ENOUGH TO BREW A POTION THEN LEARN IT
-
-
-    # IF INVENTORY FULL WITH LOTS OF BLUE LEARN A HIGHER UP POTION
+    
+    # IF LEARNING IMPLEMENTED: Instead of resting look to learn a new skill
     # Special case of full inventory, check if any potions can be brewed, if not learn a spell
     if sum(inv[0]) >= 9 and not cast_it and not can_brew(best_potion, inv):
         special_iter += 1
@@ -244,8 +207,7 @@ while True:
             if potion[-1] > best_potion[-1] and can_brew(potion, inv):
                 best_potion = potion
         # if been is special iter for too long cast any spell that makes inventory space
-        if special_iter > 2 and not can_brew(potion, inv):
-               
+        if special_iter > 3 and not can_brew(potion, inv):
             for spell in cast:
                 if sum(spell[1])+sum(inv[0]) < 10 and can_cast(spell, inv): # if frees up space cast it
                     best_spell = spell
@@ -259,16 +221,14 @@ while True:
                         break
 
         if best_potion == [0, 0, 0, 0] and not cast_it:
-            if inv[0][0] > 3: # if lots of blues
-                for spell in learn[1:]: # learn as high up spell you can learn
-                    if can_learn(spell, inv):
-                        learn_it = True
-                        best_learn = spell
-            else:
-                for spell in learn[::-1]: # if not just learn a spell
-                    if can_learn(spell, inv):
-                        learn_it = True
-                        best_learn = spell
+            for spell in learn[:3]: # if not just learn a spell
+                if can_learn(spell, inv):
+                    learn_it = True
+                    best_learn = spell
+
+    # TIMEING THE CODE
+    t2 = datetime.now()
+    print(f"{t2-t1}", file=sys.stderr, flush=True)
     
     if learn_it:
         print(f"LEARN {best_learn[0]}")
