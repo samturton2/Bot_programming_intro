@@ -162,10 +162,13 @@ while True:
             cast.append([action_id, [delta_0, delta_1, delta_2, delta_3], 1, repeatable, castable])
             if repeatable: # if repeatable also append an instance where its cast twice
                 cast.append([action_id, [delta_0*2, delta_1*2, delta_2*2, delta_3*2], 2, repeatable, castable])
+                cast.append([action_id, [delta_0*3, delta_1*3, delta_2*3, delta_3*3], 3, repeatable, castable])
         elif action_type == "LEARN":
             learn.append([action_id, [delta_0, delta_1, delta_2, delta_3], 1, repeatable, tax_count, tome_index])
             if repeatable: # if repeatable also append an instance where its would be cast twice
                 learn.append([action_id, [delta_0*2, delta_1*2, delta_2*2, delta_3*2], 2, tax_count, tome_index])
+                learn.append([action_id, [delta_0*3, delta_1*3, delta_2*3, delta_3*3], 3, tax_count, tome_index])
+
 
     # sort brew list by price (small to large)
     brew.sort(key = lambda x: x[-1])
@@ -232,12 +235,10 @@ while True:
                             if potion[-1]/weight > max_ratio:
                                 max_ratio = potion[-1]
                                 best_potion = potion
-
-                        for option in weighted:
-                            if option[0][-1] > rup[1]+2-rup[0]: # if the options price overtakes
-                                if option[1] < min_weight:
-                                     min_weight = option[1]
-                                     best_potion = option[0]
+                        if brewed == 5 or enemy_brewed == 5:
+                            for option in brew[::-1]:
+                                if option[0][-1] > rup[1]+2-rup[0]: # if the options price overtakes
+                                    best_potion = option[0]
     # FIND THE BEST SPELL TO CAST
             # IF LESS THAN 4 INGREDIENTS CAST A SPELL THAT GETS YOU MORE
                         if sum(inv[0]) < 4:

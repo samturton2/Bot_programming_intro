@@ -1,5 +1,6 @@
 import sys
 import math
+import datetime
 
 # define the number of round and number of brewed
 brewed = 0
@@ -29,7 +30,7 @@ def can_brew(potion_list, inv_list):
 # Define a function that checks if the potion can be learned
 def can_learn(spell_list, inv_list):
     # if the tome_count > inventory + taxcount can't learn spell
-    if spell_list[-1] > inv_list[0][0] + spell_list[-2]:
+    if spell_list[-1] > inv_list[0][0]: # + spell_list[-2]:
         return False
     else:
         return True
@@ -45,6 +46,7 @@ def in_brew(a_potion, brew_list):
 # the standard input according to the problem statement.
 # game loop
 while True:
+    t1 = datetime.datetime.now()
     
     round_i += 1 # Tells us the round we are on
     brew = [] # empty list for potion_lists
@@ -160,7 +162,7 @@ while True:
         # print(f"debug ... {weighted}", file=sys.stderr, flush=True)  
         min_weight = 1000 # try and find the minimum weighted potion to brew that overtakes the enemy score
         for option in weighted:
-            if option[0][-1] > rup[1]-rup[0]: # if the options price overtakes
+            if option[0][-1] > rup[1]+2-rup[0]: # if the options price overtakes
                 if option[1] < min_weight:
                     min_weight = option[1]
                     best_potion = option[0]
@@ -172,7 +174,7 @@ while True:
     
     # SORTING WEIGHTED LIST BLOCK       
         # Write code that loops over the potions in the brew, then loops over the spells finding the best spell to cast
-        interest = [0.6, 2, 3.2, 4.5]
+        interest = [0.5, 2, 3.2, 4.5]
         not_interest = [0.1, 0.3, 0.6, 0.9]
         sorted_spells = []
         
@@ -180,8 +182,8 @@ while True:
             # get a delta list of how far away each spell is from making the potion, ignoring deltas not in the potion
             weight = 0
             for i in range(4):
-                amount = spell[1][i] + potion[1][i] + inv[0][i]
-                if potion[1][i] == 0:
+                amount = spell[1][i] + best_potion[1][i] + inv[0][i]
+                if best_potion[1][i] == 0:
                     weight += amount * not_interest[i]
                 elif amount >= 0:
                     weight += interest[i]
@@ -201,9 +203,7 @@ while True:
         # go through the weighted list of spells, and looking to cast the most useful one first
         for spell, weight in sorted_spells:
             # if the spell is really good but we cant cast it just rest
-            if weight > 14 and not spell[-1]:
-                cast_it = False
-                rest_it = True
+            if weight > 20 and not spell[-1]:
                 break
             # cast the best spell you can
             elif can_cast(spell, inv) and spell[-1]:
@@ -217,18 +217,21 @@ while True:
     if sum(inv[0]) >= 9 and not cast_it:
         special_iter += 1
         # if been is special iter for too long cast any spell that makes inventory space
-        if special_iter > 3:
+        if special_iter > 2:
             for spell in cast:
-                if sum(spell[1])+sum(inv[0]) < 10 and can_cast(spell, inv) and spell[-1]: # if frees up space cast it
+                if sum(spell[1])+sum(inv[0]) < sum(inv[0]) and can_cast(spell, inv) and spell[-1]: # if frees up space cast it
                     best_spell = spell
                     cast_it = True
                     break
             if not cast_it:
-                for spell in cast: # if not just cast any spell
-                    if can_cast(spell, inv) and spell[-1]: # if can cast it, cast it
-                        best_spell = spell
-                        cast_it = True
-                        break
+                for spell in cast: # if not just cast any spell 
+                    if can_cast(spell, inv) and spell[-1]: # if can cast it, cast it, unless it gives too many greens
+                        if spell[1][1] + inv[0][1] > 6:
+                            continue
+                        else:
+                            best_spell = spell
+                            cast_it = True
+                            break
         # print(f"debug ... {cast_it}", file=sys.stderr, flush=True)
         if not cast_it:
             if inv[0][0] > 3: # if lots of blues
@@ -245,11 +248,14 @@ while True:
     # print(f"debug ... {best_potion}", file=sys.stderr, flush=True)
     # Find a spell to deffo cast
     if not can_brew(best_potion, inv):
-        for spell in cast:
-            for potion in brew[::-1]:
+        for potion in brew[::-1]:
+            for spell in cast:
                 deffo_cast_it = True # Assume to deffo cast it
+                if not can_cast(spell, inv) or not spell[-1]:
+                    deffo_cast_it = False
+                    continue
                 for i in range(4):
-                    if potion[1][i] + spell[1][i] + inv[0][i] < 0 or not can_cast(spell, inv) or not spell[-1]:
+                    if potion[1][i] + spell[1][i] + inv[0][i] < 0:
                         deffo_cast_it = False
                         break
                 if deffo_cast_it and can_cast(spell, inv) and spell[-1]:
@@ -261,54 +267,73 @@ while True:
 
     # Find a spell to deffo learn
     if not can_brew(best_potion, inv) and not deffo_cast_it:
-        for spell in learn:
+        for potion in brew[::-1]:
             # print(f"{spell[-2]}", file=sys.stderr, flush=True)
-            for potion in brew[::-1]:
+            for spell in learn:
                 deffo_learn_it = True
                 newinv = inv
-                newinv[0][0] = inv[0][0]-spell[-1]+spell[-2]
-                for i in range(4):
+                newinv[0][0] = inv[0][0]-spell[-1]+spell[-2] # Define inventory of next go if learn spell
+                if sum(newinv[0]) > 10: # checks for situation of not collecting all the tax
+                    for i in range(1,spell[-2]+1):
+                        newinv[0][0] -= i
+                        if sum(newinv[0]) <= 10:
+                            break
+
+                if not can_learn(spell, inv) or not can_cast(spell, newinv): # if you cant learn the spell or you wouldnt be able to cast it once learnt
+                    deffo_learn_it = False
+                    continue
+                for i in range(4): # check if the spell wouldnt make enough ingredients for potion
                     if potion[1][i] + spell[1][i] + newinv[0][i] < 0 :
                         deffo_learn_it = False
                         break
-                if not can_learn(spell, inv) or not can_cast(spell, newinv):
-                    deffo_learn_it = False
-                elif deffo_learn_it and can_learn(spell, inv):
-                    best_learn = spell
+                if deffo_learn_it and can_learn(spell, inv):
+                    best_learn = (spell, potion[-1])
                     break
             if deffo_learn_it and can_learn(spell, inv):
                 break
 
     # Find a time to deffo rest
     if not can_brew(best_potion, inv) and not deffo_cast_it:
-        for spell in cast:
-            if not spell[-1] and can_cast(spell, inv):
-                for potion in brew[::-1]:
+        for potion in brew[::-1]:
+            for spell in cast:
+                if spell[-1] == 0 and can_cast(spell, inv):
                     deffo_rest_it = True # Assume to deffo rest it
                     for i in range(4):
                         if potion[1][i] + spell[1][i] + inv[0][i] < 0:
                             deffo_rest_it = False
                             break
-                    if deffo_rest_it and can_cast(spell, inv):
-                        best_spell = spell
+                    if deffo_rest_it and can_cast(spell, inv) and not spell[-1]:
+                        best_spell = (spell, potion[-1])
                         break
-                if deffo_rest_it and can_cast(spell, inv):
-                    break
+            if deffo_rest_it:
+                break
+
+    # check if both deffo rest it and deffo learn it and find which one gets the higher priced potion
+    if deffo_rest_it and deffo_learn_it:
+        if best_learn[-1] < best_spell[-1]:
+            deffo_learn_it = False
+        else:
+            deffo_rest_it = False
 
     # Find a potion to deffo brew
     for potion in brew:
         if can_brew(potion, inv):
             best_potion = potion
             deffo_brew_it = True
+  
+
+    t2 = datetime.datetime.now()
+    print(f"{t2-t1}", file=sys.stderr, flush=True)
     
     if deffo_brew_it:
+        brewed += 1
         print(f"BREW {best_potion[0]}")
     elif deffo_cast_it:
         print(f"CAST {best_spell[0]} {best_spell[2]}")
     elif deffo_rest_it:
         print("REST")
     elif deffo_learn_it:
-        print(f"LEARN {best_learn[0]}")
+        print(f"LEARN {best_learn[0][0]}")
     elif learn_it:
         print(f"LEARN {best_learn[0]}")
     elif cast_it:

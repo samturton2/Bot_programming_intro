@@ -181,8 +181,8 @@ while True:
             # get a delta list of how far away each spell is from making the potion, ignoring deltas not in the potion
             weight = 0
             for i in range(4):
-                amount = spell[1][i] + potion[1][i] + inv[0][i]
-                if potion[1][i] == 0:
+                amount = spell[1][i] + best_potion[1][i] + inv[0][i]
+                if best_potion[1][i] == 0:
                     weight += amount * not_interest[i]
                 elif amount >= 0:
                     weight += interest[i]
